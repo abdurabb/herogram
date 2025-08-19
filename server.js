@@ -37,10 +37,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'AI Image Generator API' });
 });
 
-
 app.get('/index.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+app.use(express.static(__dirname));
 
 // Initialize database and start server
 initializeDatabase()
