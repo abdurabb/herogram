@@ -37,6 +37,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'AI Image Generator API' });
 });
 
+app.use(express.static('public'));
 // Initialize database and start server
 initializeDatabase()
   .then(() => {
