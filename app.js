@@ -461,21 +461,22 @@ function setupEventListeners() {
             // Generate thumbnails
             console.log("Generating thumbnails for title ID:", currentTitle.id, "Quantity:", quantity);
             const generateResponse = await generatePaintings(currentTitle.id, quantity);
-            console.log("Generate thumbnails response:", generateResponse.data);
+            console.log("Generate thumbnails response:", generateResponse?.data);
             
             // Start polling for thumbnail status instead of loading immediately
-            pollThumbnailStatus(currentTitle.id, quantity);
+            pollThumbnailStatus(currentTitle?.id, quantity);
 
             // Refresh titles list after starting generation/polling
             console.log("Refreshing titles list");
             const titlesResponse = await getTitles();
-            titles = titlesResponse.data.titles;
+            titles = titlesResponse?.data?.titles;
             renderTitlesList();
             
             // No longer call loadThumbnails here immediately
             // console.log("Loading thumbnails");
             // await loadThumbnails(currentTitle.id);
         } catch (error) {
+            console.log('message',error?.message)
             console.error('Error generating thumbnails:', error);
             showLoading(false);
             
@@ -850,6 +851,7 @@ async function generateServerThumbnails(titleObj, references, quantity, isAdditi
             ai2Progress.style.width = '0%';
             
             // Get AI-generated thumbnails from server (now in parallel)
+            console.log('')
             const newThumbnails = await ServerAPI.generateThumbnails(titleObj, references, quantity, startIndex);
             
             // After all thumbnails are generated
@@ -869,6 +871,7 @@ async function generateServerThumbnails(titleObj, references, quantity, isAdditi
             thumbnailReady = null;
         });
     } catch (error) {
+        console.log('error finding',error?.message)
         console.error('Error generating thumbnails:', error);
         alert('Failed to generate paintings. Please try again.');
         progressSection.style.display = 'none';

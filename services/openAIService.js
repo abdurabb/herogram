@@ -15,6 +15,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 // Function to generate an image using OpenAI's gpt-image-1 model
 async function generateImage(ideaId, prompt, references = []) {
+  console.log(ideaId, prompt, 'from generateImage function')
   const tempFiles = []; // Initialize tempFiles array
   
   try {
@@ -85,7 +86,8 @@ async function generateImage(ideaId, prompt, references = []) {
             ...formData.getHeaders()
           },
           maxContentLength: Infinity,
-          maxBodyLength: Infinity
+          maxBodyLength: Infinity,
+          timeout: 120000,
         });
         console.log('OpenAI edits response received');
       } catch (error) {
@@ -164,6 +166,7 @@ async function generateImage(ideaId, prompt, references = []) {
         }
       }
       console.log('Successfully extracted image data from response');
+    
     } catch (error) {
       console.error('Error extracting image data from response:', error);
       console.error('Response structure:', JSON.stringify(response.data, null, 2));

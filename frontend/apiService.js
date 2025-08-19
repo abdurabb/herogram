@@ -8,7 +8,8 @@ let api = null;
 const initAPI = async () => {
   try {
     // Use the current origin to get the config (for local development, we might need to adjust this)
-    const serverIp  = process.env.SERVER_IP
+    const serverIp = window.SERVER_IP || 'http://localhost:3000';
+    console.log(serverIp,'server ip fetching from env file ............')
     // const configResponse = await axios.get('/api/config');
     const configResponse = await axios.get(`${serverIp}/api/config`);
     const { serverIP, apiPort } = configResponse.data;
@@ -20,7 +21,7 @@ const initAPI = async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 10000 // Add timeout to avoid long waits on network issues
+      timeout: 30000 // Add timeout to avoid long waits on network issues
     });
 
     // Add auth token to requests if available
@@ -46,7 +47,7 @@ const initAPI = async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 10000
+      timeout: 30000
     });
 
     // Add auth token to requests if available
@@ -64,9 +65,12 @@ const initAPI = async () => {
 
 // Helper function to ensure API is initialized before making requests
 const ensureAPI = async () => {
+  console.log('reached to ensureAPI')
   if (!api) {
+    console.log('Not Api')
     await initAPI();
   }
+  console.log(api , 'api api ...')
   return api;
 };
 
@@ -136,7 +140,9 @@ export const deleteReference = async (id) => {
 // Painting endpoints (renamed from Thumbnail)
 export const generateThumbnails = async (titleId, quantity = 5) => {
   const apiInstance = await ensureAPI();
-  return apiInstance.post('/paintings/generate', { titleId, quantity });
+  console.log('inside of the api service', )
+  console.log(apiInstance)
+  return apiInstance.post('/paintings/generate', { titleId, quantity },{ timeout: 120000  });
 };
 
 export const getThumbnails = async (titleId) => {

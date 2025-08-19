@@ -8,9 +8,9 @@ async function generatePaintings(req, res) {
     console.error('User not authenticated properly');
     return res.status(401).json({ error: 'Authentication required' });
   }
-
+ 
   const { titleId, quantity = 5 } = req.body;
-  console.log(titleId, 'from abdurabb')
+  console.log(titleId,quantity)
   const MAX_PARALLEL = 5;
   
   if (!titleId) {
