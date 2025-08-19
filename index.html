@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login/Register Container -->
+    <div id="login-container" style="display: block;">
+        <div class="auth-form-container">
+            <h1>AI Image Generator</h1>
+            
+            <!-- Login Form -->
+            <form id="login-form">
+                <h2>Login</h2>
+                <div class="input-group">
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn primary-btn">Login</button>
+                <p>Don't have an account? <a href="#" id="show-register">Register</a></p>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;">
+                <h2>Register</h2>
+                <div class="input-group">
+                    <label for="register-username">Username:</label>
+                    <input type="text" id="register-username" required>
+                </div>
+                <div class="input-group">
+                    <label for="register-email">Email:</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="register-password">Password:</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <button type="submit" class="btn primary-btn">Register</button>
+                <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+            </form>
+        </div>
+    </div>
+    
+    <!-- App Container (Will be hidden until logged in) -->
+    <div id="app-container" class="app-container" style="display: none;">
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Communicating with server...</p>
+        </div>
+        
+        <!-- Left Sidebar for Titles -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Your Titles</h2>
+                <button id="new-title-btn" class="btn">+ New</button>
+            </div>
+            <div class="user-info">
+                <span id="username-display"></span>
+                <button id="logout-btn" class="btn small-btn">Logout</button>
+            </div>
+            <div class="title-list" id="title-list">
+                <!-- Titles will be populated here -->
+                <div class="empty-state">No titles yet. Create your first one!</div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <header>
+                <h1>AI Image Generator</h1>
+            </header>
+
+            <!-- Reference Images Section -->
+            <div class="reference-section">
+                <h3>Reference Images</h3>
+                <div class="reference-toggle">
+                    <label class="toggle">
+                        <input type="checkbox" id="global-reference-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Use global references</span>
+                </div>
+                <div class="global-references" id="global-references">
+                    <div class="dropzone" id="global-dropzone">
+                        <p>Drop reference images here or</p>
+                        <button class="btn" id="global-upload-btn">Upload</button>
+                        <input type="file" id="global-file-input" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div class="reference-images" id="global-reference-images">
+                        <!-- Global reference images will be displayed here -->
+                    </div>
+                </div>
+                <div class="title-references" id="title-references" style="display: none;">
+                    <div class="dropzone" id="title-dropzone">
+                        <p>Drop title-specific reference images here or</p>
+                        <button class="btn" id="title-upload-btn">Upload</button>
+                        <input type="file" id="title-file-input" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div class="reference-images" id="title-reference-images">
+                        <!-- Title-specific reference images will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Title Input Area -->
+            <div class="title-input-section">
+                <h3>Create Paintings</h3>
+                <div class="input-group">
+                    <label for="title-input">Title:</label>
+                    <input type="text" id="title-input" placeholder="Enter your title here...">
+                </div>
+                <div class="input-group">
+                    <label for="custom-instructions">Custom Instructions:</label>
+                    <textarea id="custom-instructions" placeholder="Enter custom instructions for AI (e.g., 'Minimalist design with pastel colors', 'Vintage comic book style', etc.)"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="quantity-select">Number of Paintings:</label>
+                    <input type="number" id="quantity-select" min="1" max="10" value="5">
+                </div>
+                <button id="generate-btn" class="btn primary-btn">Generate Paintings</button>
+            </div>
+
+            <!-- Generation Progress -->
+            <div class="progress-section" id="progress-section" style="display: none;">
+                <div class="progress-item">
+                    <p>AI 1: <span id="ai1-status">Generating painting ideas...</span></p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ai1-progress"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <p>AI 2: <span id="ai2-status">Waiting for concepts...</span></p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ai2-progress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thumbnails Results -->
+            <div class="thumbnails-section">
+                <h3>Generated Paintings</h3>
+                <div class="thumbnails-grid" id="thumbnails-grid">
+                    <!-- Paintings will be displayed here -->
+                    <div class="empty-state" id="thumbnails-empty-state">No paintings generated yet.</div>
+                </div>
+                <div class="more-thumbnails-section" id="more-thumbnails-section" style="display: none;">
+                    <button id="more-thumbnails-btn" class="btn primary-btn">Generate More Paintings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Details Modal -->
+    <div id="prompt-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-header">
+                <h3 id="modal-title">Painting Prompt Details</h3>
+            </div>
+            <div class="modal-body">
+                <div class="thumbnail-preview">
+                    <img id="modal-image" src="" alt="Painting Preview">
+                </div>
+                <div class="prompt-details">
+                    <h4>Prompt Summary</h4>
+                    <p id="prompt-summary"></p>
+                    
+                    <h4>Title</h4>
+                    <p id="prompt-title"></p>
+                    
+                    <h4>Custom Instructions</h4>
+                    <p id="prompt-instructions"></p>
+                    
+                    <h4>Context Used</h4>
+                    <div id="prompt-context">
+                        <p><strong>References:</strong> <span id="reference-count">0</span> images used</p>
+                        <div id="reference-thumbnails" class="reference-thumbnails"></div>
+                    </div>
+                    
+                    <h4>Full Prompt</h4>
+                    <pre id="full-prompt" class="full-prompt"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js" type="module"></script>
+</body>
+</html> 
