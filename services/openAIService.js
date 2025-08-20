@@ -17,19 +17,19 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 async function generateImage(ideaId, prompt, references = []) {
   console.log(ideaId, prompt, 'from generateImage function')
   const tempFiles = []; // Initialize tempFiles array
-  
+
   try {
     console.log(`Starting image generation for idea ${ideaId}`);
     console.log(`Using API key: ${OPENAI_API_KEY ? 'API key exists' : 'NO API KEY FOUND!'}`);
-    
+
     if (!OPENAI_API_KEY) {
       throw new Error('OpenAI API key is missing. Please check your .env file.');
     }
-    
+
     if (!ideaId) {
       throw new Error('Idea ID is required for image generation');
     }
-    
+
     // First update status to processing
     const statusUpdateParams = ['processing', ideaId];
     // Validate parameters
@@ -37,7 +37,7 @@ async function generateImage(ideaId, prompt, references = []) {
       console.error('Attempted to execute query with undefined parameter:', { statusUpdateParams });
       throw new Error('Invalid query parameter detected');
     }
-    
+
     await pool.execute(
       'UPDATE paintings SET status = ? WHERE idea_id = ?',
       statusUpdateParams
@@ -45,7 +45,7 @@ async function generateImage(ideaId, prompt, references = []) {
     console.log(`Updated status to processing for idea ${ideaId}`);
 
     let response;
-    
+
     if (references && references.length > 0) {
       console.log(`Using ${references.length} reference images for edits endpoint`);
       // Use the edits endpoint when there are reference images
@@ -54,7 +54,7 @@ async function generateImage(ideaId, prompt, references = []) {
       formData.append('prompt', prompt);
       formData.append('size', '1536x1024');
       formData.append('quality', 'high');
-      
+
       // Add reference images
       for (const ref of references) {
         try {
@@ -62,14 +62,14 @@ async function generateImage(ideaId, prompt, references = []) {
           const base64Data = ref.image_data.split(',')[1];
           const buffer = Buffer.from(base64Data, 'base64');
           const tempFilePath = path.join(UPLOADS_DIR, `temp_${Date.now()}_${Math.random().toString(36).substring(7)}.png`);
-          
+
           // Save to temp file
           fs.writeFileSync(tempFilePath, buffer);
           console.log(`Created temp file ${tempFilePath}`);
-          
+
           // Append to form
           formData.append('image[]', fs.createReadStream(tempFilePath));
-          
+
           // Track temp file for cleanup
           tempFiles.push(tempFilePath);
         } catch (err) {
@@ -77,7 +77,8 @@ async function generateImage(ideaId, prompt, references = []) {
           // Continue with other images if one fails
         }
       }
-      
+
+
       try {
         console.log('Making request to OpenAI edits endpoint');
         response = await axios.post('https://api.openai.com/v1/images/edits', formData, {
@@ -87,7 +88,7 @@ async function generateImage(ideaId, prompt, references = []) {
           },
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
-          timeout: 120000,
+          timeout: 60000,
         });
         console.log('OpenAI edits response received');
       } catch (error) {
@@ -123,7 +124,7 @@ async function generateImage(ideaId, prompt, references = []) {
           size: '1536x1024'
         };
         console.log('Making request to OpenAI generations endpoint with payload:', JSON.stringify(requestBody, null, 2));
-        
+
         response = await axios.post('https://api.openai.com/v1/images/generations', requestBody, {
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -166,7 +167,7 @@ async function generateImage(ideaId, prompt, references = []) {
         }
       }
       console.log('Successfully extracted image data from response');
-    
+
     } catch (error) {
       console.error('Error extracting image data from response:', error);
       console.error('Response structure:', JSON.stringify(response.data, null, 2));
@@ -189,7 +190,7 @@ async function generateImage(ideaId, prompt, references = []) {
       console.error('Attempted to execute query with undefined parameter:', { completeUpdateParams });
       throw new Error('Invalid query parameter detected');
     }
-    
+
     await pool.execute(
       'UPDATE paintings SET image_url = ?, image_data = ?, status = ?, used_reference_ids = ? WHERE idea_id = ?',
       completeUpdateParams
@@ -203,7 +204,7 @@ async function generateImage(ideaId, prompt, references = []) {
     };
   } catch (error) {
     console.error('Error generating image:', error);
-    
+
     // Cleanup temp files if error occurs
     for (const tempFile of tempFiles) {
       if (fs.existsSync(tempFile)) {
@@ -211,7 +212,7 @@ async function generateImage(ideaId, prompt, references = []) {
         console.log(`Deleted temp file ${tempFile} during error cleanup`);
       }
     }
-    
+
     // Update status to failed with error message
     try {
       const errorMsg = error.message || 'Unknown error';
@@ -230,7 +231,7 @@ async function generateImage(ideaId, prompt, references = []) {
     } catch (dbError) {
       console.error('Error updating database with failure status:', dbError);
     }
-    
+
     throw error;
   }
 }

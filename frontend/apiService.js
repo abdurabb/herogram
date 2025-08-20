@@ -9,19 +9,19 @@ const initAPI = async () => {
   try {
     // Use the current origin to get the config (for local development, we might need to adjust this)
     const serverIp = window.SERVER_IP || 'http://localhost:3000';
-    console.log(serverIp,'server ip fetching from env file ............')
+    console.log(serverIp, 'server ip fetching from env file ............')
     // const configResponse = await axios.get('/api/config');
     const configResponse = await axios.get(`${serverIp}/api/config`);
     const { serverIP, apiPort } = configResponse.data;
     API_URL = `http://${serverIP}:${apiPort}/api`;
-    
+
     // Create axios instance with auth token
     api = axios.create({
       baseURL: API_URL,
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 30000 // Add timeout to avoid long waits on network issues
+      // timeout: 120000 // Add timeout to avoid long waits on network issues
     });
 
     // Add auth token to requests if available
@@ -32,22 +32,22 @@ const initAPI = async () => {
       }
       return config;
     });
-    
+
     return true;
   } catch (error) {
     console.error('Failed to fetch server configuration, using default', error);
-    
+
     // Fallback to using the current hostname instead of hardcoded IP
     const currentHostname = window.location.hostname;
     API_URL = `http://${currentHostname}:3000/api`;
-    
+
     // Create axios instance with auth token
     api = axios.create({
       baseURL: API_URL,
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 30000
+      // timeout: 120000
     });
 
     // Add auth token to requests if available
@@ -58,7 +58,7 @@ const initAPI = async () => {
       }
       return config;
     });
-    
+
     return false;
   }
 };
@@ -70,7 +70,7 @@ const ensureAPI = async () => {
     console.log('Not Api')
     await initAPI();
   }
-  console.log(api , 'api api ...')
+  console.log(api, 'api api ...')
   return api;
 };
 
@@ -140,9 +140,9 @@ export const deleteReference = async (id) => {
 // Painting endpoints (renamed from Thumbnail)
 export const generateThumbnails = async (titleId, quantity = 5) => {
   const apiInstance = await ensureAPI();
-  console.log('inside of the api service', )
+  console.log('inside of the api service',)
   console.log(apiInstance)
-  return apiInstance.post('/paintings/generate', { titleId, quantity },{ timeout: 120000  });
+  return await apiInstance.post('/paintings/generate', { titleId, quantity }, );
 };
 
 export const getThumbnails = async (titleId) => {

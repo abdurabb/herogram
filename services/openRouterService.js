@@ -63,8 +63,7 @@ async function generateIdeas(titleId, titleText, instructions, previousIdeas = [
         'Content-Type': 'application/json'
       }
     });
-
-    const toolCall = response.data.choices[0].message.tool_calls[0];
+    const toolCall = response?.data?.choices[0].message?.tool_calls[0];
     const ideaData = JSON.parse(toolCall.function.arguments);
 
     if (!ideaData.summary || !ideaData.fullPrompt) {

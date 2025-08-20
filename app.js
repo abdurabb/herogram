@@ -450,6 +450,7 @@ function setupEventListeners() {
             // Upload any new title-specific references
             if (!globalReferenceToggle.checked && currentTitle.references) {
                 console.log("Processing title-specific references");
+
                 for (const ref of currentTitle.references) {
                     if (!ref.id) { // New reference that hasn't been uploaded
                         console.log("Uploading new reference");
@@ -460,10 +461,11 @@ function setupEventListeners() {
             
             // Generate thumbnails
             console.log("Generating thumbnails for title ID:", currentTitle.id, "Quantity:", quantity);
-            const generateResponse = await generatePaintings(currentTitle.id, quantity);
-            console.log("Generate thumbnails response:", generateResponse?.data);
+            const generateResponse = await generatePaintings(currentTitle.id, quantity)
+            console.log("Generate thumbnails response:", generateResponse?.data,);
             
             // Start polling for thumbnail status instead of loading immediately
+            // -----
             pollThumbnailStatus(currentTitle?.id, quantity);
 
             // Refresh titles list after starting generation/polling
@@ -473,8 +475,8 @@ function setupEventListeners() {
             renderTitlesList();
             
             // No longer call loadThumbnails here immediately
-            // console.log("Loading thumbnails");
-            // await loadThumbnails(currentTitle.id);
+            console.log("Loading thumbnails");
+            await loadThumbnails(currentTitle.id);
         } catch (error) {
             console.log('message',error?.message)
             console.error('Error generating thumbnails:', error);
@@ -1338,8 +1340,8 @@ async function loadThumbnails(titleId) {
 // Poll for thumbnail generation status
 async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
     console.log(`[Poll #${attempt + 1}] Entered pollThumbnailStatus for title ${titleId}`);
-    const maxAttempts = 40; // Poll for up to 2 minutes (40 * 3s)
-    const pollInterval = 3000; // Poll every 3 seconds
+    const maxAttempts = 60; // Poll for up to 2 minutes (40 * 3s)
+    const pollInterval = 6000; // Poll every 3 seconds 30000
 
     if (attempt >= maxAttempts) {
         console.error(`[Poll #${attempt + 1}] Polling timed out.`);
@@ -1365,7 +1367,7 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
 
         // Filter only the thumbnails belonging to the current generation batch/title
         // Assuming they are added sequentially and sorted ASC by creation time
-        const relevantThumbnails = thumbnails.filter(t => t.title_id === titleId); 
+        const relevantThumbnails = thumbnails.filter(t => t.title_id == titleId); 
 
         let completedCount = 0;
         let processingCount = 0;
@@ -1391,7 +1393,7 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
             }
         });
 
-        const totalRelevant = relevantThumbnails.length;
+        const totalRelevant = relevantThumbnails.length;  
         console.log(`Status: ${completedCount} completed/failed, ${processingCount} processing, ${pendingCount} pending out of ${totalRelevant}`);
 
         // Update progress UI (example)
@@ -1405,7 +1407,8 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
 
         // Check if all *relevant* thumbnails for this title are completed or failed
         // This check might need refinement if multiple batches can run concurrently
-        if (completedCount === totalRelevant && totalRelevant >= expectedQuantity) {
+        if (completedCount === totalRelevant ) {
+            // && totalRelevant >= expectedQuantity
             console.log(`[Poll #${attempt + 1}] Condition met. Polling finished.`);
             progressSection.style.display = 'none';
             moreThumbnailsSection.style.display = 'block';
