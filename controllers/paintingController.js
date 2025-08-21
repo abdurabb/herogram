@@ -2,15 +2,14 @@ const { pool } = require('../database');
 const openRouterService = require('../services/openRouterService');
 const openAIService = require('../services/openAIService');
 
-// Generate painting ideas (parallel processing)
+
+// -------------
 async function generatePaintings(req, res) {
-  if (!req.user || !req.user.id) {
-    console.error('User not authenticated properly');
+  if (!req.user?.id) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
   const { titleId, quantity = 5 } = req.body;
-  
   const MAX_PARALLEL = 3;
 
   if (!titleId) {
@@ -18,116 +17,94 @@ async function generatePaintings(req, res) {
   }
 
   try {
-    // Get title info
-    const titleParams = [titleId];
-    if (titleParams.some(p => p === undefined)) {
-      console.error('Attempted to execute query with undefined parameter:', { titleParams });
-      return res.status(500).json({ error: 'Internal server error: Invalid query parameter detected' });
-    }
-
-    const [titleRows] = await pool.execute(
+    // Step 1: Fetch title
+    const [[title]] = await pool.execute(
       'SELECT id, title, instructions FROM titles WHERE id = ?',
-      titleParams
+      [titleId]
     );
 
-    if (titleRows.length === 0) {
+    if (!title) {
       return res.status(404).json({ error: 'Title not found' });
     }
 
-    const title = titleRows[0];
-
-    // Get reference images
-    const refParams = [titleId, req.user.id];
-    if (refParams.some(p => p === undefined)) {
-      console.error('Attempted to execute query with undefined parameter:', { refParams });
-      return res.status(500).json({ error: 'Internal server error: Invalid query parameter detected' });
-    }
-
+    // Step 2: Fetch references
     const [refRows] = await pool.execute(
       'SELECT id, image_data FROM references2 WHERE title_id = ? OR (user_id = ? AND is_global = 1)',
-      refParams
+      [titleId, req.user.id]
     );
-
     const references = refRows.map(row => ({ id: row.id, image_data: row.image_data }));
 
-    // Get previous ideas for this title to avoid duplication
-    const prevParams = [titleId];
-    if (prevParams.some(p => p === undefined)) {
-      console.error('Attempted to execute query with undefined parameter:', { prevParams });
-      return res.status(500).json({ error: 'Internal server error: Invalid query parameter detected' });
-    }
-
+    // Step 3: Fetch previous ideas
     const [prevIdeas] = await pool.execute(
       'SELECT id, summary FROM ideas WHERE title_id = ? ORDER BY created_at DESC',
-      prevParams
+      [titleId]
     );
 
-    // Generate ideas - first step (sequential)
+    // Step 4: Generate new painting ideas (sequential to avoid repetition)
     const newIdeas = [];
+
     for (let i = 0; i < quantity; i++) {
       const idea = await openRouterService.generateIdeas(
         titleId,
         title.title,
         title.instructions,
-        [...prevIdeas, ...newIdeas] // Include previously generated ideas to avoid repetition
+        [...prevIdeas, ...newIdeas] // Avoid duplication
       );
       newIdeas.push(idea);
 
-      // Create painting entry in processing state
-      const paintingParams = [titleId, idea.id, 'pending'];
-      if (paintingParams.some(p => p === undefined)) {
-        console.error('Attempted to execute query with undefined parameter:', { paintingParams });
-        return res.status(500).json({ error: 'Internal server error: Invalid query parameter detected' });
-      }
-
+      // Insert placeholder painting with status = 'pending'
       await pool.execute(
         'INSERT INTO paintings (title_id, idea_id, status) VALUES (?, ?, ?)',
-        paintingParams
+        [titleId, idea.id, 'pending']
       );
     }
 
-    // Start image generation in parallel (respecting MAX_PARALLEL limit)
-    const processIdeas = async () => {
-      const pendingIdeas = [...newIdeas];
-      const activePromises = [];
+    // Step 5: Generate images with limited concurrency
+    const pendingIdeas = [...newIdeas];
 
-      const startNextIdea = () => {
-        if (pendingIdeas.length === 0) return;
+    const generateInBatches = async () => {
+      const active = [];
+
+      const startNext = async () => {
+        if (!pendingIdeas.length) return;
         const idea = pendingIdeas.shift();
-        const promise = openAIService.generateImage(idea.id, idea.fullPrompt, references)
-          .catch(error => console.error(`Error generating image for idea ${idea.id}:`, error))
-          .finally(() => {
-            // When one finishes, start another if available
-            const index = activePromises.indexOf(promise);
-            if (index !== -1) activePromises.splice(index, 1);
-            startNextIdea();
-          });
 
-        activePromises.push(promise);
+        const p = openAIService.generateImage(idea.id, idea.fullPrompt, references)
+          .catch(err => console.error(`Image generation failed for idea ${idea.id}:`, err));
+
+        active.push(p);
+
+        p.finally(() => {
+          active.splice(active.indexOf(p), 1);
+        });
+
+        // Respect MAX_PARALLEL
+        if (active.length < MAX_PARALLEL) {
+          await startNext();
+        }
       };
 
-      // Start initial batch
+      // Kick off initial batch
       const initialBatch = Math.min(MAX_PARALLEL, pendingIdeas.length);
-      for (let i = 0; i < initialBatch; i++) {
-        console.log('from loop of initial Batch')
-        startNextIdea();
-      }
+      await Promise.all(Array.from({ length: initialBatch }, startNext));
     };
 
-    // Start processing in background
-    processIdeas();
+    generateInBatches(); // Run in background
 
-    console.log('end function generate')
-    // Return immediately with the generated ideas
     return res.status(200).json({
       message: `Started generating ${quantity} paintings`,
       ideas: newIdeas
     });
   } catch (error) {
     console.error('Error in generatePaintings:', error);
-    res.status(500).json({ error: 'Failed to generate paintings' });
+    return res.status(500).json({ error: 'Failed to generate paintings' });
   }
 }
+
+
+
+
+// -------------
 
 // Get status of all paintings for a title
 async function getPaintings(req, res) {
